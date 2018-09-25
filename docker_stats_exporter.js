@@ -24,10 +24,16 @@ const dockerPort = argOptions.hostport;
 let dockerOptions;
 if (dockerIP && dockerPort) {
     dockerOptions = { host: dockerIP, port: dockerPort };
+    console.log(`Connecting to Docker on ${dockerIP}:${dockerPort}...`);
 } else {
     dockerOptions = { socketPath: '/var/run/docker.sock' };
+    console.log(`Connecting to Docker on /var/run/docker.sock...`);
 }
 const docker = new Docker(dockerOptions);
+if (!docker) {
+    console.log(`ERROR: Unable to connect to Docker`);
+    process.exit(1);
+}
 
 // Initialize prometheus metrics.
 const gaugeCpuUsageRatio = new prom.Gauge({
@@ -62,6 +68,7 @@ const gaugeNetworkTransmittedBytes = new prom.Gauge({
 });
 
 // Register all metrics
+console.log(`Registering Prometheus metrics...`);
 const register = new prom.Registry();
 register.registerMetric(gaugeCpuUsageRatio);
 register.registerMetric(gaugeMemoryUsageBytes);
@@ -69,8 +76,14 @@ register.registerMetric(gaugeMemoryLimitBytes);
 register.registerMetric(gaugeMemoryUsageRatio);
 register.registerMetric(gaugeNetworkReceivedBytes);
 register.registerMetric(gaugeNetworkTransmittedBytes);
+prom.collectDefaultMetrics({
+    timeout: 5000,
+    register: register,
+    prefix: appName + '_',
+});
 
 // Start Server.
+console.log(`Starting HTTP server...`);
 const server = http.createServer((req, res) => {
     // Only allowed to poll prometheus metrics.
     if (req.method !== 'GET') {
@@ -83,6 +96,7 @@ const server = http.createServer((req, res) => {
     });
 }).listen(port);
 server.setTimeout(30000);
+console.log(`Docker Stats exporter listening on port ${port}`);
 
 // Main function to get the metrics for each container
 async function gatherMetrics() {
@@ -136,7 +150,7 @@ async function gatherMetrics() {
             gaugeNetworkTransmittedBytes.set(labels, netTx);
         }
     } catch (err) {
-        console.log(err);
+        console.log('ERROR: ' + err);
     }
 }
 
