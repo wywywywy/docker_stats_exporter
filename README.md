@@ -15,6 +15,7 @@ The output basically mirrors the CLI output of `docker stats`.
     --port     9487         Exporter listens on this port (default = 9487)
     --hostip   127.0.0.1    Docker engine IP to connect to (when using HTTP)
     --hostport 2375         Docker engine port to connect to (when using HTTP)
+    --collectdefault        Collect default Prometheus metrics as well (default = false)
 
 If no `hostip` and `hostport` provided, it defaults to connect via socket to `/var/run/docker.sock`.
 
@@ -24,6 +25,7 @@ The arguments can also be set as env variables instead. Useful if you're using i
 1. DOCKERSTATS_PORT
 2. DOCKERSTATS_HOSTIP
 3. DOCKERSTATS_HOSTPORT
+4. DOCKERSTATS_DEFAULTMETRICS
 
 # Installation
 

@@ -12,13 +12,15 @@ const appName = 'dockerstats';
 
 // Get args and set options
 const argOptions = commandLineArgs([
-    { name: 'port', alias: 'p', type: Number, defaultValue: 9487, },
-    { name: 'hostip', type: String, defaultValue: '', },
-    { name: 'hostport', type: Number, defaultValue: 0, }
+    { name: 'port', alias: 'p', type: Number, defaultValue: process.env.DOCKERSTATS_PORT || 9487, },
+    { name: 'hostip', type: String, defaultValue: process.env.DOCKERSTATS_HOSTIP || '', },
+    { name: 'hostport', type: Number, defaultValue: process.env.DOCKERSTATS_HOSTPORT || 0, },
+    { name: 'collectdefault', type: Boolean, },
 ]);
 const port = argOptions.port;
 const dockerIP = argOptions.hostip;
 const dockerPort = argOptions.hostport;
+const collectDefaultMetrics = process.env.DOCKERSTATS_DEFAULTMETRICS || argOptions.collectdefault;
 
 // Connect to docker
 let dockerOptions;
@@ -76,11 +78,13 @@ register.registerMetric(gaugeMemoryLimitBytes);
 register.registerMetric(gaugeMemoryUsageRatio);
 register.registerMetric(gaugeNetworkReceivedBytes);
 register.registerMetric(gaugeNetworkTransmittedBytes);
-prom.collectDefaultMetrics({
-    timeout: 5000,
-    register: register,
-    prefix: appName + '_',
-});
+if (collectDefaultMetrics) {
+    prom.collectDefaultMetrics({
+        timeout: 5000,
+        register: register,
+        prefix: appName + '_',
+    });
+}
 
 // Start Server.
 console.log(`Starting HTTP server...`);
