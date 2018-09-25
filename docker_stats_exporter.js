@@ -68,6 +68,16 @@ const gaugeNetworkTransmittedBytes = new prom.Gauge({
     'help': 'Network transmitted in bytes',
     'labelNames': ['name', 'id'],
 });
+const gaugeBlockIoReadBytes = new prom.Gauge({
+    'name': appName + '_blockio_read_bytes',
+    'help': 'Block IO read in bytes',
+    'labelNames': ['name', 'id'],
+});
+const gaugeBlockIoWrittenBytes = new prom.Gauge({
+    'name': appName + '_blockio_written_bytes',
+    'help': 'Block IO written in bytes',
+    'labelNames': ['name', 'id'],
+});
 
 // Register all metrics
 console.log(`Registering Prometheus metrics...`);
@@ -78,6 +88,8 @@ register.registerMetric(gaugeMemoryLimitBytes);
 register.registerMetric(gaugeMemoryUsageRatio);
 register.registerMetric(gaugeNetworkReceivedBytes);
 register.registerMetric(gaugeNetworkTransmittedBytes);
+register.registerMetric(gaugeBlockIoReadBytes);
+register.registerMetric(gaugeBlockIoWrittenBytes);
 if (collectDefaultMetrics) {
     prom.collectDefaultMetrics({
         timeout: 5000,
@@ -125,8 +137,8 @@ async function gatherMetrics() {
         // Build metrics for each container
         let results = await Promise.all(promises);
         for (let result of results) {
-            const labels = { 
-                'name': result['name'].replace('/', ''), 
+            const labels = {
+                'name': result['name'].replace('/', ''),
                 'id': result['id'].slice(0, 12),
             };
 
@@ -155,6 +167,24 @@ async function gatherMetrics() {
             let netTx = result['networks']['eth0']['tx_bytes'];
             gaugeNetworkReceivedBytes.set(labels, netRx);
             gaugeNetworkTransmittedBytes.set(labels, netTx);
+
+            // Block IO
+            let ioRead = 0.00;
+            let ioWrite = 0.00;
+            if (result['blkio_stats']['io_service_bytes_recursive'] && Array.isArray(result['blkio_stats']['io_service_bytes_recursive'])) {
+                for (let io of result['blkio_stats']['io_service_bytes_recursive']) {
+                    switch (io['op'].toUpperCase()) {
+                        case 'READ':
+                            ioRead += io['value'];
+                            break;
+                        case 'WRITE':
+                            ioWrite += io['value'];
+                            break;
+                    }
+                }
+            }
+            gaugeBlockIoReadBytes.set(labels, ioRead);
+            gaugeBlockIoWrittenBytes.set(labels, ioWrite);
         }
     } catch (err) {
         console.log('ERROR: ' + err);

@@ -62,7 +62,7 @@ Also because `docker stats` runs one process for each container to gather metric
 
 # TODO
 
-1. Block IO metrics
+1. ~~Block IO metrics~~
 2. Other useful metrics not in `docker stats`
 
 # Contributing
