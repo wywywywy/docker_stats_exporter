@@ -1,5 +1,3 @@
-# **WORK IN PROGRESS NOT READY FOR USE**
-
 Docker Stats exporter for Prometheus.io, written in Node.js 8.
 
 This exporter uses [Apocas's Dockerode library](https://github.com/apocas/dockerode).
