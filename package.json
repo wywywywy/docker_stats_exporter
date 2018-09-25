@@ -1,0 +1,23 @@
+{
+  "name": "docker_stats_exporter",
+  "version": "1.0.0",
+  "description": "Docker Stats exporter for Prometheus.io",
+  "main": "docker_stats_exporter.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wywywywy/docker_stats_exporter.git"
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/wywywywy/docker_stats_exporter/issues"
+  },
+  "homepage": "https://github.com/wywywywy/docker_stats_exporter#readme",
+  "dependencies": {
+    "dockerode": "^2.5.7",
+    "prom-client": "^11.1.3"
+  }
+}
