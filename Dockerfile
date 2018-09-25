@@ -1,14 +1,16 @@
-FROM python:3.6-slim
+FROM node:8-alpine
 
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 
-COPY requirements.txt /usr/src/app
-RUN pip install --no-cache-dir -r requirements.txt
+RUN npm i -g npm
 
-COPY docker_stats_exporter.py /usr/src/app
+COPY package*.json /usr/src/app
+RUN npm ci
 
-EXPOSE 9488
+COPY docker_stats_exporter.js /usr/src/app
+
+EXPOSE 9487
 ENV DOCKERSTATS_PORT=9487 DEBUG=0
 
-ENTRYPOINT [ "python", "-u", "./docker_stats_exporter.py" ]
+ENTRYPOINT [ "npm", "start" ]

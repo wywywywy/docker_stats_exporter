@@ -1,11 +1,33 @@
 #!/usr/bin/env node
 'use strict';
+
+// Requirements
 const http = require('http');
 const prom = require('prom-client');
 const Docker = require('dockerode');
-const docker = new Docker({ socketPath: '/var/run/docker.sock' });
+const commandLineArgs = require('command-line-args')
 
+// Constants
 const appName = 'dockerstats';
+
+// Get args and set options
+const argOptions = commandLineArgs([
+    { name: 'port', alias: 'p', type: Number, defaultValue: 9487, },
+    { name: 'hostip', type: String, defaultValue: '', },
+    { name: 'hostport', type: Number, defaultValue: 0, }
+]);
+const port = argOptions.port;
+const dockerIP = argOptions.hostip;
+const dockerPort = argOptions.hostport;
+
+// Connect to docker
+let dockerOptions;
+if (dockerIP && dockerPort) {
+    dockerOptions = { host: dockerIP, port: dockerPort };
+} else {
+    dockerOptions = { socketPath: '/var/run/docker.sock' };
+}
+const docker = new Docker(dockerOptions);
 
 // Initialize prometheus metrics.
 const gaugeCpuUsageRatio = new prom.Gauge({
@@ -48,6 +70,21 @@ register.registerMetric(gaugeMemoryUsageRatio);
 register.registerMetric(gaugeNetworkReceivedBytes);
 register.registerMetric(gaugeNetworkTransmittedBytes);
 
+// Start Server.
+const server = http.createServer((req, res) => {
+    // Only allowed to poll prometheus metrics.
+    if (req.method !== 'GET') {
+        res.writeHead(404, { 'Content-Type': 'text/html' });
+        return res.end('Support GET only');
+    }
+    res.setHeader('Content-Type', register.contentType);
+    gatherMetrics().then(() => {
+        res.end(register.metrics());
+    });
+}).listen(port);
+server.setTimeout(30000);
+
+// Main function to get the metrics for each container
 async function gatherMetrics() {
     try {
         // Get all containers
@@ -59,15 +96,18 @@ async function gatherMetrics() {
         // Get stats for each container in parallel
         let promises = [];
         for (let container of containers) {
-            promises.push(docker.getContainer(container.Id).stats({ 'stream': false, 'decode': true }));
+            if (container.Id) {
+                promises.push(docker.getContainer(container.Id).stats({ 'stream': false, 'decode': true }));
+            }
         }
 
         // Build metrics for each container
         let results = await Promise.all(promises);
         for (let result of results) {
-            let containerName = result['name'].replace('/','');
-            let containerId = result['id'].slice(0,12);
-            let labels = {'name': containerName, 'id': containerId};
+            const labels = { 
+                'name': result['name'].replace('/', ''), 
+                'id': result['id'].slice(0, 12),
+            };
 
             // CPU
             let cpuDelta = result['cpu_stats']['cpu_usage']['total_usage'] - result['precpu_stats']['cpu_usage']['total_usage'];
@@ -100,16 +140,3 @@ async function gatherMetrics() {
     }
 }
 
-// Start Server.
-const server = http.createServer((req, res) => {
-    // Only allowed to poll prometheus metrics.
-    if (req.method !== 'GET' && req.url !== '/metrics') {
-        res.writeHead(404, { 'Content-Type': 'text/html' });
-        return res.end('Not Found.');
-    }
-    res.setHeader('Content-Type', register.contentType);
-    gatherMetrics().then(() => {
-        res.end(register.metrics());
-    });
-}).listen(9487);
-server.setTimeout(30000);
