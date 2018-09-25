@@ -105,10 +105,13 @@ console.log(`Docker Stats exporter listening on port ${port}`);
 // Main function to get the metrics for each container
 async function gatherMetrics() {
     try {
+        // Reset all to zero before proceeding
+        register.resetMetrics();
+
         // Get all containers
         let containers = await docker.listContainers();
         if (!containers || !Array.isArray(containers) || !containers.length) {
-            throw new Error('Unable to get containers');
+            throw new Error('ERROR: Unable to get containers');
         }
 
         // Get stats for each container in parallel
