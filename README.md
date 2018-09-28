@@ -11,6 +11,7 @@ The output basically mirrors the CLI output of `docker stats`.
 ## Arguments
 
     --port     9487         Exporter listens on this port (default = 9487)
+    --interval 15           Polling interval in seconds (default = 15, minimum 3)
     --hostip   127.0.0.1    Docker engine IP to connect to (when using HTTP)
     --hostport 2375         Docker engine port to connect to (when using HTTP)
     --collectdefault        Collect default Prometheus metrics as well (default = false)
@@ -21,9 +22,10 @@ If no `hostip` and `hostport` provided, it defaults to connect via socket to `/v
 
 The arguments can also be set as env variables instead. Useful if you're using it in a Docker container.
 1. DOCKERSTATS_PORT
-2. DOCKERSTATS_HOSTIP
-3. DOCKERSTATS_HOSTPORT
-4. DOCKERSTATS_DEFAULTMETRICS
+2. DOCKERSTATS_INTERVAL
+3. DOCKERSTATS_HOSTIP
+4. DOCKERSTATS_HOSTPORT
+5. DOCKERSTATS_DEFAULTMETRICS
 
 # Installation
 
@@ -56,7 +58,7 @@ Add this to prometheus.yml and change the IP/port if needed.
 
 Because of the way `docker stats` works, it always takes at least 2 seconds to output the results.  Basically it takes a snapshot then after a second it takes another one to compare the results.
 
-So there is no point querying the exporter more than once every 3 or so seconds.
+So there is no point pooling the Docker engine more than once every 3 or so seconds.
 
 Also because `docker stats` runs one process for each container to gather metrics, this exporter is not suitable for nodes that have a large number (hundreds) of containers.
 

@@ -13,11 +13,13 @@ const appName = 'dockerstats';
 // Get args and set options
 const argOptions = commandLineArgs([
     { name: 'port', alias: 'p', type: Number, defaultValue: process.env.DOCKERSTATS_PORT || 9487, },
+    { name: 'interval', alias: 'i', type: Number, defaultValue: process.env.DOCKERSTATS_INTERVAL || 15, },
     { name: 'hostip', type: String, defaultValue: process.env.DOCKERSTATS_HOSTIP || '', },
     { name: 'hostport', type: Number, defaultValue: process.env.DOCKERSTATS_HOSTPORT || 0, },
     { name: 'collectdefault', type: Boolean, },
 ]);
 const port = argOptions.port;
+const interval = argOptions.interval >= 3 ? argOptions.interval : 3;
 const dockerIP = argOptions.hostip;
 const dockerPort = argOptions.hostport;
 const collectDefaultMetrics = process.env.DOCKERSTATS_DEFAULTMETRICS || argOptions.collectdefault;
@@ -26,10 +28,10 @@ const collectDefaultMetrics = process.env.DOCKERSTATS_DEFAULTMETRICS || argOptio
 let dockerOptions;
 if (dockerIP && dockerPort) {
     dockerOptions = { host: dockerIP, port: dockerPort };
-    console.log(`Connecting to Docker on ${dockerIP}:${dockerPort}...`);
+    console.log(`INFO: Connecting to Docker on ${dockerIP}:${dockerPort}...`);
 } else {
     dockerOptions = { socketPath: '/var/run/docker.sock' };
-    console.log(`Connecting to Docker on /var/run/docker.sock...`);
+    console.log(`INFO: Connecting to Docker on /var/run/docker.sock...`);
 }
 const docker = new Docker(dockerOptions);
 if (!docker) {
@@ -80,7 +82,7 @@ const gaugeBlockIoWrittenBytes = new prom.Gauge({
 });
 
 // Register all metrics
-console.log(`Registering Prometheus metrics...`);
+console.log(`INFO: Registering Prometheus metrics...`);
 const register = new prom.Registry();
 register.registerMetric(gaugeCpuUsageRatio);
 register.registerMetric(gaugeMemoryUsageBytes);
@@ -98,8 +100,12 @@ if (collectDefaultMetrics) {
     });
 }
 
+// Start gathering metrics
+gatherMetrics();
+setInterval(gatherMetrics, interval * 1000);
+
 // Start Server.
-console.log(`Starting HTTP server...`);
+console.log(`INFO: Starting HTTP server...`);
 const server = http.createServer((req, res) => {
     // Only allowed to poll prometheus metrics.
     if (req.method !== 'GET') {
@@ -107,19 +113,14 @@ const server = http.createServer((req, res) => {
         return res.end('Support GET only');
     }
     res.setHeader('Content-Type', register.contentType);
-    gatherMetrics().then(() => {
-        res.end(register.metrics());
-    });
+    res.end(register.metrics());
 }).listen(port);
 server.setTimeout(30000);
-console.log(`Docker Stats exporter listening on port ${port}`);
+console.log(`INFO: Docker Stats exporter listening on port ${port}`);
 
 // Main function to get the metrics for each container
 async function gatherMetrics() {
     try {
-        // Reset all to zero before proceeding
-        register.resetMetrics();
-
         // Get all containers
         let containers = await docker.listContainers();
         if (!containers || !Array.isArray(containers) || !containers.length) {
@@ -133,9 +134,12 @@ async function gatherMetrics() {
                 promises.push(docker.getContainer(container.Id).stats({ 'stream': false, 'decode': true }));
             }
         }
+        let results = await Promise.all(promises);
+
+        // Reset all to zero before proceeding
+        register.resetMetrics();
 
         // Build metrics for each container
-        let results = await Promise.all(promises);
         for (let result of results) {
             const labels = {
                 'name': result['name'].replace('/', ''),
