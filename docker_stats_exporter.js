@@ -127,7 +127,7 @@ async function gatherMetrics() {
             throw new Error('ERROR: Unable to get containers');
         }
 
-        // Get stats for each container in parallel
+        // Get stats for each container in one go
         let promises = [];
         for (let container of containers) {
             if (container.Id) {
@@ -147,55 +147,63 @@ async function gatherMetrics() {
             };
 
             // CPU
-            let cpuDelta = result['cpu_stats']['cpu_usage']['total_usage'] - result['precpu_stats']['cpu_usage']['total_usage'];
-            let systemDelta = result['cpu_stats']['system_cpu_usage'] - result['precpu_stats']['system_cpu_usage'];
-            if (systemDelta <= 0) {
-                systemDelta = 1;
+            if (result['cpu_stats'] && result['cpu_stats']['cpu_usage'] && result['precpu_stats'] && result['precpu_stats']['cpu_usage']) {
+                let cpuDelta = result['cpu_stats']['cpu_usage']['total_usage'] - result['precpu_stats']['cpu_usage']['total_usage'];
+                let systemDelta = result['cpu_stats']['system_cpu_usage'] - result['precpu_stats']['system_cpu_usage'];
+                if (systemDelta <= 0) {
+                    systemDelta = 1;
+                }
+                let cpuPercent = parseFloat(((cpuDelta / systemDelta) * result['cpu_stats']['online_cpus'] * 100).toFixed(2));
+                gaugeCpuUsageRatio.set(labels, cpuPercent);
             }
-            let cpuPercent = parseFloat(((cpuDelta / systemDelta) * result['cpu_stats']['online_cpus'] * 100).toFixed(2));
-            gaugeCpuUsageRatio.set(labels, cpuPercent);
 
             // Memory
-            let memUsage = result['memory_stats']['usage'];
-            let memLimit = result['memory_stats']['limit'];
-            if (memLimit <= 0) {
-                memLimit = 1;
+            if (result['memory_stats']) {
+                let memUsage = result['memory_stats']['usage'];
+                let memLimit = result['memory_stats']['limit'];
+                if (memLimit <= 0) {
+                    memLimit = 1;
+                }
+                let memPercent = parseFloat(((memUsage / memLimit) * 100).toFixed(2));
+                gaugeMemoryUsageBytes.set(labels, memUsage);
+                gaugeMemoryLimitBytes.set(labels, memLimit);
+                gaugeMemoryUsageRatio.set(labels, memPercent);
             }
-            let memPercent = parseFloat(((memUsage / memLimit) * 100).toFixed(2));
-            gaugeMemoryUsageBytes.set(labels, memUsage);
-            gaugeMemoryLimitBytes.set(labels, memLimit);
-            gaugeMemoryUsageRatio.set(labels, memPercent);
 
             // Network
-            if (result['networks']['eth0']) {
-                let netRx = result['networks']['eth0']['rx_bytes'];
-                let netTx = result['networks']['eth0']['tx_bytes'];
-                gaugeNetworkReceivedBytes.set(labels, netRx);
-                gaugeNetworkTransmittedBytes.set(labels, netTx);
-            } else if (result['networks']['host']) {
-                let netRx = result['networks']['host']['rx_bytes'];
-                let netTx = result['networks']['host']['tx_bytes'];
-                gaugeNetworkReceivedBytes.set(labels, netRx);
-                gaugeNetworkTransmittedBytes.set(labels, netTx);
+            if (result['networks']) {
+                if (result['networks']['eth0']) {
+                    let netRx = result['networks']['eth0']['rx_bytes'];
+                    let netTx = result['networks']['eth0']['tx_bytes'];
+                    gaugeNetworkReceivedBytes.set(labels, netRx);
+                    gaugeNetworkTransmittedBytes.set(labels, netTx);
+                } else if (result['networks']['host']) {
+                    let netRx = result['networks']['host']['rx_bytes'];
+                    let netTx = result['networks']['host']['tx_bytes'];
+                    gaugeNetworkReceivedBytes.set(labels, netRx);
+                    gaugeNetworkTransmittedBytes.set(labels, netTx);
+                }
             }
 
             // Block IO
-            let ioRead = 0.00;
-            let ioWrite = 0.00;
-            if (result['blkio_stats']['io_service_bytes_recursive'] && Array.isArray(result['blkio_stats']['io_service_bytes_recursive'])) {
-                for (let io of result['blkio_stats']['io_service_bytes_recursive']) {
-                    switch (io['op'].toUpperCase()) {
-                        case 'READ':
-                            ioRead += io['value'];
-                            break;
-                        case 'WRITE':
-                            ioWrite += io['value'];
-                            break;
+            if (result['blkio_stats']) {
+                let ioRead = 0.00;
+                let ioWrite = 0.00;
+                if (result['blkio_stats']['io_service_bytes_recursive'] && Array.isArray(result['blkio_stats']['io_service_bytes_recursive'])) {
+                    for (let io of result['blkio_stats']['io_service_bytes_recursive']) {
+                        switch (io['op'].toUpperCase()) {
+                            case 'READ':
+                                ioRead += io['value'];
+                                break;
+                            case 'WRITE':
+                                ioWrite += io['value'];
+                                break;
+                        }
                     }
                 }
+                gaugeBlockIoReadBytes.set(labels, ioRead);
+                gaugeBlockIoWrittenBytes.set(labels, ioWrite);
             }
-            gaugeBlockIoReadBytes.set(labels, ioRead);
-            gaugeBlockIoWrittenBytes.set(labels, ioWrite);
         }
     } catch (err) {
         console.log('ERROR: ' + err);
