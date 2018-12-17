@@ -115,7 +115,7 @@ const server = http.createServer((req, res) => {
     res.setHeader('Content-Type', register.contentType);
     res.end(register.metrics());
 }).listen(port);
-server.setTimeout(30000);
+server.setTimeout(20000);
 console.log(`INFO: Docker Stats exporter listening on port ${port}`);
 
 // Main function to get the metrics for each container
@@ -167,10 +167,17 @@ async function gatherMetrics() {
             gaugeMemoryUsageRatio.set(labels, memPercent);
 
             // Network
-            let netRx = result['networks']['eth0']['rx_bytes'];
-            let netTx = result['networks']['eth0']['tx_bytes'];
-            gaugeNetworkReceivedBytes.set(labels, netRx);
-            gaugeNetworkTransmittedBytes.set(labels, netTx);
+            if (result['networks']['eth0']) {
+                let netRx = result['networks']['eth0']['rx_bytes'];
+                let netTx = result['networks']['eth0']['tx_bytes'];
+                gaugeNetworkReceivedBytes.set(labels, netRx);
+                gaugeNetworkTransmittedBytes.set(labels, netTx);
+            } else if (result['networks']['host']) {
+                let netRx = result['networks']['host']['rx_bytes'];
+                let netTx = result['networks']['host']['tx_bytes'];
+                gaugeNetworkReceivedBytes.set(labels, netRx);
+                gaugeNetworkTransmittedBytes.set(labels, netTx);
+            }
 
             // Block IO
             let ioRead = 0.00;
