@@ -27,7 +27,7 @@ const collectDefaultMetrics = process.env.DOCKERSTATS_DEFAULTMETRICS || argOptio
 // Connect to docker
 let dockerOptions;
 if (dockerIP && dockerPort) {
-    dockerOptions = { host: dockerIP, port: dockerPort };
+    dockerOptions = { host: dockerIP, port: dockerPort, };
     console.log(`INFO: Connecting to Docker on ${dockerIP}:${dockerPort}...`);
 } else {
     dockerOptions = { socketPath: '/var/run/docker.sock' };

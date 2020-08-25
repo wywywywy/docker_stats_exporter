@@ -1,4 +1,4 @@
-Docker Stats exporter for Prometheus.io, written in Node.js 8.
+Docker Stats exporter for Prometheus.io, written in Node.js 12.
 
 This exporter uses [Apocas's Dockerode library](https://github.com/apocas/dockerode).
 
@@ -31,7 +31,7 @@ The arguments can also be set as env variables instead. Useful if you're using i
 
 ## From Source
 
-Node 8 is required to run it.
+Node 10 is required to run it.
 
     git clone git@github.com:wywywywy/docker_stats_exporter.git
     cd docker_stats_exporter
