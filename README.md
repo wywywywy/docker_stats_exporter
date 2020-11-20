@@ -31,7 +31,7 @@ The arguments can also be set as env variables instead. Useful if you're using i
 
 ## From Source
 
-Node 10 is required to run it.
+Node 12 is required to run it.
 
     git clone git@github.com:wywywywy/docker_stats_exporter.git
     cd docker_stats_exporter
@@ -42,7 +42,7 @@ Recommend npm version >= 6, as version 5 seems to have problems installing Docke
 
 ## With Docker
 
-    docker run -d --restart=always -p 9487:9487 -v /var/run/docker.sock:/var/run/docker.sock -v /usr/bin/docker:/usr/bin/docker wywywywy/docker_stats_exporter:latest
+    docker run -d --restart=always -p 9487:9487 -v /var/run/docker.sock:/var/run/docker.sock wywywywy/docker_stats_exporter:latest
 
 ## Prometheus Config
 
