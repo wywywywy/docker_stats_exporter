@@ -50,6 +50,11 @@ const gaugeMemoryUsageBytes = new prom.Gauge({
     'help': 'Memory usage in bytes',
     'labelNames': ['name', 'id'],
 });
+const gaugeMemoryUsageRssBytes = new prom.Gauge({
+    'name': appName + '_memory_usage_rss_bytes',
+    'help': 'Memory rss usage in bytes',
+    'labelNames': ['name', 'id'],
+});
 const gaugeMemoryLimitBytes = new prom.Gauge({
     'name': appName + '_memory_limit_bytes',
     'help': 'Memory limit in bytes',
@@ -86,6 +91,7 @@ console.log(`INFO: Registering Prometheus metrics...`);
 const register = new prom.Registry();
 register.registerMetric(gaugeCpuUsageRatio);
 register.registerMetric(gaugeMemoryUsageBytes);
+register.registerMetric(gaugeMemoryUsageRssBytes);
 register.registerMetric(gaugeMemoryLimitBytes);
 register.registerMetric(gaugeMemoryUsageRatio);
 register.registerMetric(gaugeNetworkReceivedBytes);
@@ -160,12 +166,14 @@ async function gatherMetrics() {
             // Memory
             if (result['memory_stats']) {
                 let memUsage = result['memory_stats']['usage'];
+                let memUsageRss = result['memory_stats']['stats'] && result['memory_stats']['stats']['rss'] ? result['memory_stats']['stats']['rss'] : 0;
                 let memLimit = result['memory_stats']['limit'];
                 if (memLimit <= 0) {
                     memLimit = 1;
                 }
                 let memPercent = parseFloat(((memUsage / memLimit) * 100).toFixed(2));
                 gaugeMemoryUsageBytes.set(labels, memUsage);
+                gaugeMemoryUsageRssBytes.set(labels, memUsageRss);
                 gaugeMemoryLimitBytes.set(labels, memLimit);
                 gaugeMemoryUsageRatio.set(labels, memPercent);
             }
