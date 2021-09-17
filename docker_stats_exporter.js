@@ -166,7 +166,7 @@ async function gatherMetrics() {
             // Memory
             if (result['memory_stats']) {
                 let memUsage = result['memory_stats']['usage'];
-                let memUsageRss = result['memory_stats']['stats']['rss'];
+                let memUsageRss = result['memory_stats']['stats'] && result['memory_stats']['stats']['rss'] ? result['memory_stats']['stats']['rss'] : 0;
                 let memLimit = result['memory_stats']['limit'];
                 if (memLimit <= 0) {
                     memLimit = 1;
