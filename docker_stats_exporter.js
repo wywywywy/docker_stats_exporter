@@ -127,20 +127,21 @@ console.log(`INFO: Docker Stats exporter listening on port ${port}`);
 // Main function to get the metrics for each container
 async function gatherMetrics() {
     try {
+
         // Get all containers
-        let containers = await docker.listContainers();
+        const containers = await docker.listContainers();
         if (!containers || !Array.isArray(containers) || !containers.length) {
             throw new Error('ERROR: Unable to get containers');
         }
 
         // Get stats for each container in one go
-        let promises = [];
+        const promises = [];
         for (let container of containers) {
             if (container.Id) {
                 promises.push(docker.getContainer(container.Id).stats({ 'stream': false, 'decode': true }));
             }
         }
-        let results = await Promise.all(promises);
+        const results = await Promise.all(promises);
 
         // Reset all to zero before proceeding
         register.resetMetrics();
@@ -154,24 +155,23 @@ async function gatherMetrics() {
 
             // CPU
             if (result['cpu_stats'] && result['cpu_stats']['cpu_usage'] && result['precpu_stats'] && result['precpu_stats']['cpu_usage']) {
-                let cpuDelta = result['cpu_stats']['cpu_usage']['total_usage'] - result['precpu_stats']['cpu_usage']['total_usage'];
-                let systemDelta = result['cpu_stats']['system_cpu_usage'] - result['precpu_stats']['system_cpu_usage'];
-                if (systemDelta <= 0) {
-                    systemDelta = 1;
-                }
-                let cpuPercent = parseFloat(((cpuDelta / systemDelta) * result['cpu_stats']['online_cpus'] * 100).toFixed(2));
+                const cpuTotalUsage = result['cpu_stats']['cpu_usage']['total_usage'] || 0;
+                const precpuTotalUsage = result['precpu_stats']['cpu_usage']['total_usage'] || 0;
+                const cpuDelta = cpuTotalUsage - precpuTotalUsage;
+                const cpuSystemUsage = result['cpu_stats']['system_cpu_usage'] || 0;
+                const precpuSystemUsage = result['precpu_stats']['system_cpu_usage'] || 0;
+                const systemDelta = cpuSystemUsage - precpuSystemUsage;
+                const numCpus = result['cpu_stats']['online_cpus'] || 0;
+                const cpuPercent = systemDelta ? parseFloat(((cpuDelta / systemDelta) * numCpus * 100).toFixed(2)) : 0;
                 gaugeCpuUsageRatio.set(labels, cpuPercent);
             }
 
             // Memory
             if (result['memory_stats']) {
-                let memUsage = result['memory_stats']['usage'];
-                let memUsageRss = result['memory_stats']['stats'] && result['memory_stats']['stats']['rss'] ? result['memory_stats']['stats']['rss'] : 0;
-                let memLimit = result['memory_stats']['limit'];
-                if (memLimit <= 0) {
-                    memLimit = 1;
-                }
-                let memPercent = parseFloat(((memUsage / memLimit) * 100).toFixed(2));
+                const memUsage = result['memory_stats']['usage'] || 0;
+                const memUsageRss = result['memory_stats']['stats'] && result['memory_stats']['stats']['rss'] ? result['memory_stats']['stats']['rss'] : 0;
+                const memLimit = result['memory_stats']['limit'] || 0;
+                const memPercent = memLimit ? parseFloat(((memUsage / memLimit) * 100).toFixed(2)) : 0;
                 gaugeMemoryUsageBytes.set(labels, memUsage);
                 gaugeMemoryUsageRssBytes.set(labels, memUsageRss);
                 gaugeMemoryLimitBytes.set(labels, memLimit);
@@ -181,13 +181,13 @@ async function gatherMetrics() {
             // Network
             if (result['networks']) {
                 if (result['networks']['eth0']) {
-                    let netRx = result['networks']['eth0']['rx_bytes'];
-                    let netTx = result['networks']['eth0']['tx_bytes'];
+                    const netRx = result['networks']['eth0']['rx_bytes'] || 0;
+                    const netTx = result['networks']['eth0']['tx_bytes'] || 0;
                     gaugeNetworkReceivedBytes.set(labels, netRx);
                     gaugeNetworkTransmittedBytes.set(labels, netTx);
                 } else if (result['networks']['host']) {
-                    let netRx = result['networks']['host']['rx_bytes'];
-                    let netTx = result['networks']['host']['tx_bytes'];
+                    const netRx = result['networks']['host']['rx_bytes'] || 0;
+                    const netTx = result['networks']['host']['tx_bytes'] || 0;
                     gaugeNetworkReceivedBytes.set(labels, netRx);
                     gaugeNetworkTransmittedBytes.set(labels, netTx);
                 }
@@ -212,6 +212,7 @@ async function gatherMetrics() {
                 gaugeBlockIoReadBytes.set(labels, ioRead);
                 gaugeBlockIoWrittenBytes.set(labels, ioWrite);
             }
+
         }
     } catch (err) {
         console.log('ERROR: ' + err);

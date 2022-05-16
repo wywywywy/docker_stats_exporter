@@ -1,9 +1,7 @@
-FROM node:12-alpine
+FROM node:14-alpine
 
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
-
-RUN npm i -g npm@6
 
 COPY package*.json /usr/src/app/
 RUN npm ci

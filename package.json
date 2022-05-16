@@ -1,6 +1,6 @@
 {
   "name": "docker_stats_exporter",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Docker Stats exporter for Prometheus.io",
   "main": "docker_stats_exporter.js",
   "scripts": {
@@ -17,7 +17,7 @@
   },
   "homepage": "https://github.com/wywywywy/docker_stats_exporter#readme",
   "dependencies": {
-    "command-line-args": "^5.2.0",
+    "command-line-args": "^5.2.1",
     "dockerode": "^3.3.1",
     "prom-client": "^12.0.0"
   }
