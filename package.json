@@ -1,10 +1,11 @@
 {
   "name": "docker_stats_exporter",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Docker Stats exporter for Prometheus.io",
   "main": "docker_stats_exporter.js",
   "scripts": {
-    "start": "node docker_stats_exporter.js"
+    "start": "node docker_stats_exporter.js",
+    "startWithFilter": "DOCKERSTATS_CONTAINERS2COLLECT=\"(sleep2|.*test)\" node docker_stats_exporter.js"
   },
   "repository": {
     "type": "git",
