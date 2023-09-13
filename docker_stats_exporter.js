@@ -17,18 +17,22 @@ const argOptions = commandLineArgs([
     { name: 'hostip', type: String, defaultValue: process.env.DOCKERSTATS_HOSTIP || '', },
     { name: 'hostport', type: Number, defaultValue: process.env.DOCKERSTATS_HOSTPORT || 0, },
     { name: 'collectdefault', type: Boolean, },
+    // containers2collect is a 'string' to be used on docker --filter name=xxxxx to select specific containers
+    // example value: "(sleep2|.*test)"
+    { name: 'containers2collect', type: String, defaultValue: process.env.DOCKERSTATS_CONTAINERS2COLLECT || '', },
 ]);
 const port = argOptions.port;
 const interval = argOptions.interval >= 3 ? argOptions.interval : 3;
 const dockerIP = argOptions.hostip;
 const dockerPort = argOptions.hostport;
 const collectDefaultMetrics = process.env.DOCKERSTATS_DEFAULTMETRICS || argOptions.collectdefault;
+const containers2collect = argOptions.containers2collect;
 
 // Connect to docker
 let dockerOptions;
 if (dockerIP && dockerPort) {
     dockerOptions = { host: dockerIP, port: dockerPort, };
-    console.log(`INFO: Connecting to Docker on ${dockerIP}:${dockerPort}...`);
+    console.log(`INFO: Connecting to Docker on ${dockerIP}:${dockerPort}...interval:${interval} containers2collect:${containers2collect} collectDefaultMetrics:${collectDefaultMetrics}`);
 } else {
     dockerOptions = { socketPath: '/var/run/docker.sock' };
     console.log(`INFO: Connecting to Docker on /var/run/docker.sock...`);
@@ -123,13 +127,15 @@ const server = http.createServer((req, res) => {
 }).listen(port);
 server.setTimeout(20000);
 console.log(`INFO: Docker Stats exporter listening on port ${port}`);
+if ( containers2collect ) {
+    console.log(`INFO: ONLY for containers w/ name matching filter: "${containers2collect}"`);
+}
 
 // Main function to get the metrics for each container
 async function gatherMetrics() {
     try {
-
-        // Get all containers
-        const containers = await docker.listContainers();
+        // if containers2collect is empty, the filter will return all containers
+        const containers = await docker.listContainers( { "filters": `{"name": ["${containers2collect}"]}` } );
         if (!containers || !Array.isArray(containers) || !containers.length) {
             throw new Error('ERROR: Unable to get containers');
         }

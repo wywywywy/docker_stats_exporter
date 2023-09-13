@@ -15,6 +15,8 @@ The output essentially mirrors the CLI output of `docker stats`.
     --hostip   127.0.0.1    Docker engine IP to connect to (if using HTTP)
     --hostport 2375         Docker engine port to connect to (if using HTTP)
     --collectdefault        Collect default Prometheus metrics as well (default = false)
+    --containers2collect '' Collect stats ONLY for containers matching filter on 'name'. Ref. https://docs.docker.com/config/filter/
+                            Example: "(cname1|.*other_cnames)"
 
 If no `hostip` and `hostport` provided, it defaults to connect via socket to `/var/run/docker.sock`.
 
@@ -27,6 +29,7 @@ The arguments can also be set as env variables instead. Useful if you're using i
 1. DOCKERSTATS_HOSTIP
 1. DOCKERSTATS_HOSTPORT
 1. DOCKERSTATS_DEFAULTMETRICS
+1. DOCKERSTATS_CONTAINERS2COLLECT
 
 ## Installation
 
@@ -71,11 +74,18 @@ Also because `docker stats` runs one process for each container to gather metric
 
 1. ~~Block IO metrics~~
 2. Other useful metrics not in `docker stats`
+3. Add some sane default max limit on number of containers to collect stats (if on a node with huge number of containers)
 
 ## Contributing
 
 Yes, contributions are always welcome.  
 Fork it, clone it, submit a pull request, etc.
+
+### Docker build example...
+will tag with version info from 'package.json'
+docker login ...
+docker build -t <user>/docker_stats_exporter:latest -t <user>/docker_stats_exporter:$(npm pkg get version --workspaces=false | tr -d \") .
+docker push ...
 
 ## License
 
